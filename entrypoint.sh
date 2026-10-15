@@ -1,6 +1,13 @@
 #!/usr/bin/env sh
 set -eu
 
+DANDI_RUNTIME_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dandi-runtime.XXXXXX")"
+export XDG_STATE_HOME="$DANDI_RUNTIME_DIR/state"
+export XDG_CACHE_HOME="$DANDI_RUNTIME_DIR/cache"
+export XDG_CONFIG_HOME="$DANDI_RUNTIME_DIR/config"
+export XDG_DATA_HOME="$DANDI_RUNTIME_DIR/data"
+mkdir -p "$XDG_STATE_HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+
 ACTION="${DANDI_ACTION:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-/output}"
 INPUT_DIR="${INPUT_DIR:-/input}"
