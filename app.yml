@@ -1,0 +1,44 @@
+schemaVersion: '1.0'
+name: DANDI CLI
+description: Download files from a DANDI archive or upload workflow output to a destination Dandiset.
+applicationType: processor
+categories:
+  - Data Transfer
+tags:
+  - DANDI
+  - EMBER
+  - download
+  - upload
+runtime:
+  computeTypes:
+    - standard
+  gpu:
+    enabled: false
+resources:
+  cpu: 1024
+  memory: 2048
+parameters:
+  - name: DANDI_ACTION
+    type: string
+    defaultValue: "download"
+  - name: DANDI_URL
+    type: string
+    defaultValue: ""
+  - name: DATASET_ID
+    type: string
+    defaultValue: ""
+  - name: DANDI_INSTANCE
+    type: string
+    defaultValue: "ember-dandi"
+  - name: DANDISET_URL
+    type: string
+    defaultValue: ""
+inputs:
+  - name: files
+    dataType: any
+    required: false
+    description: Files to upload when DANDI_ACTION is upload; unused for download.
+outputs:
+  - name: downloaded_files
+    dataType: any
+    description: Files downloaded into OUTPUT_DIR when DANDI_ACTION is download. Upload mode currently produces no local output files.
