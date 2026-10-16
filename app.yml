@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://app.pennsieve.io/static/schemas/app-manifest.v1.json
 schemaVersion: '1.0'
 name: DANDI CLI
 description: Download files from a DANDI archive or upload workflow output to a destination Dandiset.
@@ -33,6 +34,16 @@ parameters:
   - name: DANDISET_URL
     type: string
     defaultValue: ""
+  - name: DESTINATION_PREFIX
+    type: string
+    defaultValue: "workflow-results"
+  - name: UPLOAD_VALIDATION
+    type: string
+    defaultValue: "require"
+# Inject DANDI_API_KEY through the platform's secret configuration.
+# INPUT_DIR and OUTPUT_DIR are supplied by the workflow runtime.
+# Download mode ignores INPUT_DIR; upload mode consumes it.
+# DANDISET_URL is retained for compatibility but no longer used by upload.
 inputs:
   - name: files
     dataType: any
@@ -41,4 +52,4 @@ inputs:
 outputs:
   - name: downloaded_files
     dataType: any
-    description: Files downloaded into OUTPUT_DIR when DANDI_ACTION is download. Upload mode currently produces no local output files.
+    description: Downloaded files in download mode; upload-receipt.json in upload mode.

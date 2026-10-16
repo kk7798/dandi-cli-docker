@@ -9,6 +9,7 @@ RUN apt-get update \
     && mkdir -p /input /output /work
 
 COPY entrypoint.sh /usr/local/bin/dandi-entrypoint
+COPY upload_workflow.py /usr/local/bin/dandi-upload-workflow.py
 RUN chmod +x /usr/local/bin/dandi-entrypoint
 
 WORKDIR /
