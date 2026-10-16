@@ -1,70 +1,89 @@
-# dandi-cli-docker
-Containerized DANDI CLI wrapper for downloading or uploading a file with
-environment variable flags.
+# DANDI CLI for Pennsieve
 
-## Build
-
-```bash
-docker build -t dandi-cli-env .
-```
-
-The Dockerfile installs a temporary compiler toolchain because some platforms
-do not have prebuilt wheels for all DANDI dependencies, such as `numcodecs`.
+Use this application twice: download -> workflow processor(s) -> upload.
+Pennsieve supplies INPUT_DIR and OUTPUT_DIR. Standard CPU execution is sufficient
+for transfers; the training application needs GPU capacity.
 
 ## Download
 
-DANDI's documented download command is just `dandi download <url>`. This
-container keeps that shape and passes `DANDI_URL` directly to the CLI.
-
-```bash
-docker run --rm \
-  -e DANDI_ACTION=download \
-  -e DANDI_URL="DANDI:000023" \
-  -e OUTPUT_DIR=/output \
-  -v "$PWD/data:/output" \
-  dandi-cli-env
-```
-
-`DANDI_URL` can be a DANDI identifier, API URL, web URL, or `dandi://` URL that
-the DANDI CLI supports.
+Set DANDI_ACTION=download and DANDI_URL to a Dandiset, folder, or asset URL.
+Downloaded files go to OUTPUT_DIR. DANDISET_URL is retained in the manifest for
+compatibility with old forms but is no longer used by the uploader.
 
 ## Upload
 
-Upload mode follows the EMBER/DANDI staging flow: download the draft Dandiset,
-organize files from `INPUT_DIR`, validate the staged Dandiset, then upload to
-the `ember-dandi` instance.
+Set DANDI_ACTION=upload, DATASET_ID, DANDI_INSTANCE (default ember-dandi), and
+provide DANDI_API_KEY through an appropriate secret/environment mechanism.
+Do not commit the key or place it in release notes. The application manifest
+does not expose the key as a regular parameter.
 
-```bash
-docker run --rm \
-  -e DANDI_ACTION=upload \
-  -e DATASET_ID=000123 \
-  -e DANDI_API_KEY="$DANDI_API_KEY" \
-  -e INPUT_DIR=/input \
-  -v "$PWD/source_folder:/input:ro" \
-  dandi-cli-env
-```
+The uploader fetches only destination metadata, stages INPUT_DIR in a private
+writable temporary directory, and preserves relative file paths beneath:
 
-The upload command run inside the container is equivalent to:
+    DESTINATION_PREFIX/<timestamp-and-unique-id>/
 
-```bash
-dandi download "https://dandi.emberarchive.org/dandiset/<DATASET_ID>/draft"
-cd "<DATASET_ID>"
-dandi organize "$INPUT_DIR" -f dry
-dandi organize "$INPUT_DIR"
-dandi validate .
-dandi upload -i ember-dandi
-```
+DESTINATION_PREFIX defaults to workflow-results. Each execution uses a unique
+folder, avoiding replacement of the original dataset. Files named .DS_Store and
+contents of .cache, .ipynb_checkpoints, and __pycache__ are excluded. Staging
+requires enough temporary disk space for a copy of the output being uploaded.
 
-## Environment Variables
+The CLI is invoked with generic-file support (--allow-any-path), existing-file
+policy error, and UPLOAD_VALIDATION=require by default. No remote sync/deletion
+is performed. The destination still decides which asset formats it accepts.
+UPLOAD_VALIDATION also accepts skip or ignore if explicitly configured; keep
+require for the initial run and inspect validation errors instead of changing
+this setting preemptively.
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `DANDI_ACTION` | unset | Required. Must be `download` or `upload`. |
-| `DANDI_URL` | unset | URL or identifier passed to `dandi download`. Required for downloads. |
-| `OUTPUT_DIR` | `/output` | Directory where downloads are saved. |
-| `DATASET_ID` | unset | Dandiset identifier used to download the draft Dandiset before upload. `DANDISET_ID` is also accepted. |
-| `DANDISET_URL` | `https://dandi.emberarchive.org/dandiset/<DATASET_ID>/draft` | Draft Dandiset URL used during upload staging. |
-| `INPUT_DIR` | `/input` | Mounted source folder passed to `dandi organize` during upload. |
-| `UPLOAD_WORK_DIR` | `/work` | Temporary staging directory for the downloaded draft Dandiset. |
-| `DANDI_API_KEY` | unset | DANDI API token. Required for uploads. The entrypoint maps this to the instance-specific variable, such as `EMBER_DANDI_API_KEY` for `ember-dandi`. |
-| `DANDI_INSTANCE` | `ember-dandi` | Instance passed to `dandi upload -i`. |
+After upload, the helper checks remote presence and file size for every staged
+file and writes OUTPUT_DIR/upload-receipt.json with asset IDs and archive paths.
+This is not a cryptographic content verification. A partial failed upload can
+leave files in its run folder; it does not produce a success receipt.
+
+## Bees pipeline into Dandiset 000598
+
+Publish updated releases of both applications. Wire:
+
+    DANDI download -> EMBER DLC training -> DANDI upload
+
+Download parameters:
+
+    DANDI_ACTION=download
+    DANDI_URL=https://dandi.emberarchive.org/dandiset/000598/draft
+
+Training parameters for an initial end-to-end smoke test:
+
+    PROJECT_SUBDIR=000598/bees
+    EPOCHS=1
+    SAVE_EPOCHS=1
+    BATCH_SIZE=1
+    DEVICE=cuda:0
+
+PROJECT_SUBDIR is relative to the trainer's INPUT_DIR. Confirm it matches the
+successful download's output tree. Selecting just this project is necessary
+when previous runs add further config.yaml files to the same Dandiset.
+
+Upload parameters:
+
+    DANDI_ACTION=upload
+    DATASET_ID=000598
+    DANDI_INSTANCE=ember-dandi
+    DESTINATION_PREFIX=training-results
+    UPLOAD_VALIDATION=require
+
+Supply DANDI_API_KEY to the upload container. If the Pennsieve form still
+requires the unused URL fields, use the 000598 draft URL for both. The upload
+helper selects its destination using DATASET_ID and DANDI_INSTANCE.
+
+The final uploader can connect to a Pennsieve Dataset target if you want its
+receipt saved there. Training artifacts themselves are uploaded to EMBER.
+Downloading the full Dandiset on subsequent runs also downloads previous
+results; PROJECT_SUBDIR keeps training focused on the original bees project.
+
+## Local verification
+
+With dandi installed:
+
+    python -m unittest -v test_upload_workflow.py
+    sh -n entrypoint.sh
+
+The tests mock archive calls; they do not prove a remote upload or GPU run.
