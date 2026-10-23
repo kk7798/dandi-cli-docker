@@ -34,6 +34,9 @@ parameters:
   - name: DANDISET_URL
     type: string
     defaultValue: ""
+  - name: DANDI_API_KEY
+    type: string
+    defaultValue: ""
   - name: DESTINATION_PREFIX
     type: string
     defaultValue: "workflow-results"
