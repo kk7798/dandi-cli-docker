@@ -16,7 +16,8 @@ ENV HOME=/tmp \
     XDG_DATA_HOME=/tmp/.local/share \
     XDG_STATE_HOME=/tmp/.local/state
 
-COPY entrypoint.sh /usr/local/bin/dandi-entrypoint
+COPY entrypoint.sh /usr/local/bin/dandi-entrypoint 
+COPY upload_workflow.py /usr/local/bin/dandi-upload-workflow.py
 RUN chmod +x /usr/local/bin/dandi-entrypoint
 
 WORKDIR /
