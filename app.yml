@@ -48,6 +48,16 @@ parameters:
     type: string
     description: DANDI instance passed to dandi upload.
     defaultValue: ember-dandi
+  - name: destination_prefix
+    type: string
+    defaultValue: inference-results
+  - name: upload_validation
+    type: string
+    defaultValue: require
+    validValues:
+      - require
+      - skip
+      - ignore
 
 inputs:
   - name: source_data
