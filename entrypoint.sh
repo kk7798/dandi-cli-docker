@@ -72,33 +72,16 @@ case "$ACTION" in
         if [ -z "$DATASET_ID" ]; then
             die "DATASET_ID or DANDISET_ID is required for uploads"
         fi
+
         if [ -z "${DANDI_API_KEY:-}" ]; then
             die "DANDI_API_KEY is required for uploads"
         fi
+
         if [ ! -d "$INPUT_DIR" ]; then
             die "INPUT_DIR does not exist or is not a directory: $INPUT_DIR"
         fi
 
-        dandiset_url="${DANDISET_URL:-https://dandi.emberarchive.org/dandiset/$DATASET_ID/draft}"
-        mkdir -p "$UPLOAD_WORK_DIR"
-        cd "$UPLOAD_WORK_DIR"
-
-        dandi download "$dandiset_url"
-
-        if [ -d "$DATASET_ID" ]; then
-            cd "$DATASET_ID"
-        else
-            dandiset_yaml="$(find . -maxdepth 3 -name dandiset.yaml -type f | head -n 1 || true)"
-            if [ -z "$dandiset_yaml" ]; then
-                die "could not find downloaded dandiset.yaml for DATASET_ID=$DATASET_ID"
-            fi
-            cd "$(dirname "$dandiset_yaml")"
-        fi
-
-        dandi organize "$INPUT_DIR" -f dry
-        dandi organize "$INPUT_DIR"
-        dandi validate .
-        exec dandi upload -i "$DANDI_INSTANCE"
+        exec python /usr/local/bin/dandi-upload-workflow.py
         ;;
     *)
         die "DANDI_ACTION must be download or upload"
